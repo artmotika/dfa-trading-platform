@@ -1,0 +1,5 @@
+rootProject.name = 'dfa-trading-platform'
+include 'common'
+include 'api-gateway-service'
+include 'trading-engine-service'
+include 'solana-connector-service'

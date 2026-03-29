@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trading-engine-deployment
+  labels:
+    app: trading-engine
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: trading-engine
+  template:
+    metadata:
+      labels:
+        app: trading-engine
+    spec:
+      containers:
+        - name: trading-engine
+          image: platform/trading-engine:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+          env:
+            - name: KAFKA_BROKERS
+              value: "kafka-cluster:9092"
+            - name: DB_URL
+              value: "jdbc:postgresql://postgres-db:5432/platform"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: username
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: password
+          volumeMounts:
+            - name: reports-volume
+              mountPath: /reports
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 40
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 20
+            periodSeconds: 10
+      volumes:
+        - name: reports-volume
+          emptyDir: {} # В проде здесь должен быть PersistentVolumeClaim (PVC)
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trading-engine-service
+spec:
+  type: ClusterIP
+  selector:
+    app: trading-engine
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8081
