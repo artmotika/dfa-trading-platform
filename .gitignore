@@ -1,7 +1,3 @@
 .gradle
 .idea
 build
-common/gradle
-trading-engine-service/gradle
-solana-connector-service/gradle
-api-gateway-service/gradle
