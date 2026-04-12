@@ -1,14 +1,9 @@
-FROM gradle:8.5-jdk17 AS build
+FROM eclipse-temurin:21-jdk-alpine as build
 WORKDIR /app
-COPY build.gradle settings.gradle ./
-COPY src ./src
-RUN gradle build -x test --no-daemon
+COPY . .
+RUN ./gradlew :trading-engine-service:build -x test
 
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=build /app/build/libs/*-SNAPSHOT.jar app.jar
-# Создаем директорию для отчетов (по требованию ЦФА)
-RUN mkdir -p /reports && chown 1000:1000 /reports
-USER 1000
-EXPOSE 8081
+COPY --from=build /app/trading-engine-service/build/libs/*.jar app.jar
 ENTRYPOINT ["java", "-jar", "app.jar"]

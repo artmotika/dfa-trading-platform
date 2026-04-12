@@ -1,11 +1,9 @@
-FROM gradle:8.5-jdk17 AS build
+FROM eclipse-temurin:21-jdk-alpine as build
 WORKDIR /app
-COPY build.gradle settings.gradle ./
-COPY src ./src
-RUN gradle build -x test --no-daemon
+COPY . .
+RUN ./gradlew :solana-connector-service:build -x test
 
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=build /app/build/libs/*-SNAPSHOT.jar app.jar
-EXPOSE 8082
+COPY --from=build /app/solana-connector-service/build/libs/*.jar app.jar
 ENTRYPOINT ["java", "-jar", "app.jar"]

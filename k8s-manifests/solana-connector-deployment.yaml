@@ -1,9 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: solana-connector-deployment
-  labels:
-    app: solana-connector
+  name: solana-connector
 spec:
   replicas: 2
   selector:
@@ -15,45 +13,23 @@ spec:
         app: solana-connector
     spec:
       containers:
-        - name: solana-connector
-          image: platform/solana-connector:latest
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 8082
-          env:
-            - name: KAFKA_BROKERS
-              value: "kafka-cluster:9092"
-            - name: SOLANA_RPC_URL
-              value: "https://api.devnet.solana.com"
-          resources:
-            requests:
-              memory: "256Mi"
-              cpu: "250m"
-            limits:
-              memory: "512Mi"
-              cpu: "500m"
-          livenessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8082
-            initialDelaySeconds: 30
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8082
-            initialDelaySeconds: 15
-            periodSeconds: 5
+      - name: solana-connector
+        image: solana-connector:latest
+        ports:
+        - containerPort: 8082
+        env:
+        - name: KAFKA_BROKERS
+          value: kafka:9092
+        - name: SOLANA_RPC_URL
+          value: https://api.devnet.solana.com
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: solana-connector-service
+  name: solana-connector
 spec:
-  type: ClusterIP
   selector:
     app: solana-connector
   ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 8082
+  - port: 8082
+    targetPort: 8082
