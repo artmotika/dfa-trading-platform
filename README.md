@@ -2,6 +2,10 @@
 
 PelluChain is a high-velocity Solana-based ecosystem for digital financial assets, delivering pellucid transparency and institutional-grade compliance through a unified, high-performance ledger.
 
+<div align="center">
+  <video src="media/logo_anime.mp4" autoplay loop muted playsinline style="max-width: 100%;"></video>
+</div>
+
 ## Architecture Overview
 
 ```mermaid
