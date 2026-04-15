@@ -1,9 +1,12 @@
 package org.artmotika.tradingengineservice.service;
 
 import lombok.RequiredArgsConstructor;
+import org.artmotika.tradingengineservice.dto.AssetCreatedEventDto;
+import org.artmotika.common.dto.AssetStatus;
 import org.artmotika.common.dto.OrderRequestDto;
 import org.artmotika.tradingengineservice.dto.ExecutionResultDto;
 import org.artmotika.tradingengineservice.dto.ValidatedOrderEventDto;
+import org.artmotika.tradingengineservice.model.Asset;
 import org.artmotika.tradingengineservice.model.Order;
 import org.artmotika.tradingengineservice.model.TradeLedger;
 import org.artmotika.tradingengineservice.repo.AssetRepository;
@@ -15,6 +18,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -29,6 +33,28 @@ public class TradingEngineService {
     private final VolatilityCheckService volatilityCheckService;
     private final TaxAgentService taxAgentService;
     private final BalanceService balanceService;
+
+    @KafkaListener(topics = "assets.created", groupId = "trading-engine-group")
+    public void handleAssetCreated(AssetCreatedEventDto event) {
+        Asset asset = new Asset();
+        asset.setId(event.getId());
+        asset.setName(event.getName());
+        asset.setSolanaMintAddress(event.getSolanaMintAddress());
+        asset.setTotalSupply(event.getTotalSupply());
+        asset.setType(event.getType());
+        asset.setStatus(event.getStatus());
+        asset.setIpoPrice(event.getIpoPrice());
+        assetRepository.save(asset);
+    }
+
+    @KafkaListener(topics = "ipo.status", groupId = "trading-engine-group")
+    public void handleIpoStatusUpdate(Map<String, Object> event) {
+        String assetId = (String) event.get("assetId");
+        AssetStatus status = AssetStatus.valueOf((String) event.get("status"));
+        Asset asset = assetRepository.findById(assetId).orElseThrow();
+        asset.setStatus(status);
+        assetRepository.save(asset);
+    }
 
     @KafkaListener(topics = "orders.created", groupId = "trading-engine-group")
     public void consumeOrder(OrderRequestDto dto) {

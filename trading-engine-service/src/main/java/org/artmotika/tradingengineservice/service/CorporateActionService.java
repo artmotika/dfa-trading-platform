@@ -56,4 +56,27 @@ public class CorporateActionService {
         ca.setStatus(CorporateActionStatus.COMPLETED);
         corporateActionRepository.save(ca);
     }
+
+    public void triggerVote(String assetId, String title, java.util.List<String> options) {
+        Asset asset = assetRepository.findById(assetId).orElseThrow();
+
+        CorporateAction ca = new CorporateAction();
+        ca.setId(UUID.randomUUID().toString());
+        ca.setAsset(asset);
+        ca.setType(CorporateActionType.VOTING);
+        ca.setStatus(CorporateActionStatus.PENDING);
+        ca.setCreatedAt(LocalDateTime.now());
+        corporateActionRepository.save(ca);
+
+        log.info("Triggering Voting Corporate Action: {} for Asset {}", title, assetId);
+        kafkaTemplate.send("vote.started", Map.of(
+            "actionId", ca.getId(),
+            "assetId", assetId,
+            "title", title,
+            "options", options
+        ));
+
+        ca.setStatus(CorporateActionStatus.COMPLETED);
+        corporateActionRepository.save(ca);
+    }
 }

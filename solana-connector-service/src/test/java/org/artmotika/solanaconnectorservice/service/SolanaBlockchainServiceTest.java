@@ -1,7 +1,9 @@
 package org.artmotika.solanaconnectorservice.service;
 
+import org.artmotika.solanaconnectorservice.dto.VotingEventDto;
 import org.artmotika.solanaconnectorservice.dto.ValidatedOrderEventDto;
 import org.artmotika.solanaconnectorservice.dto.ExecutionResultDto;
+import org.artmotika.solanaconnectorservice.dto.KycUpdateEventDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,6 +14,8 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -19,6 +23,8 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SolanaBlockchainServiceTest {
+
+    private static final String VALID_PUBKEY = "vines1vzrYbzduYv9bP5McaS1quZ756C87S9ER69s9P";
 
     @Mock
     private KafkaTemplate<String, ExecutionResultDto> kafkaTemplate;
@@ -34,19 +40,47 @@ class SolanaBlockchainServiceTest {
     }
 
     @Test
-    void tradeDfa_ShouldAttemptTransactionAndSendEvent() {
-        ValidatedOrderEventDto event = new ValidatedOrderEventDto();
-        event.setId("order-1");
-        event.setAmount(new BigDecimal("100"));
-
-        solanaBlockchainService.tradeDfa(event);
-
-        verify(kafkaTemplate, timeout(5000).times(1)).send(eq("trades.executed"), any(ExecutionResultDto.class));
+    void createAssetOnChain_ShouldNotCrash() {
+        Map<String, Object> asset = Map.of(
+            "id", "a1",
+            "name", "Test Asset",
+            "totalSupply", 1000L,
+            "solanaMintAddress", VALID_PUBKEY
+        );
+        solanaBlockchainService.createAssetOnChain(asset);
     }
 
     @Test
-    void registerUserOnChain_ShouldSendTransaction() {
-        solanaBlockchainService.registerUserOnChain("user-1");
-        // Since it returns void and just logs/sends tx, we verify it doesn't crash in mock mode
+    void toggleIpoOnChain_ShouldNotCrash() {
+        solanaBlockchainService.toggleIpoOnChain(Map.of("assetId", "a1", "status", "IPO_ACTIVE"));
+    }
+
+    @Test
+    void startVotingOnChain_ShouldNotCrash() {
+        VotingEventDto event = new VotingEventDto();
+        event.setActionId("v1");
+        event.setAssetId("a1");
+        event.setTitle("Test Vote");
+        event.setOptions(List.of("A", "B"));
+        solanaBlockchainService.startVotingOnChain(event);
+    }
+
+    @Test
+    void updateKycOnChain_ShouldNotCrash() {
+        KycUpdateEventDto event = new KycUpdateEventDto();
+        event.setAssetId("a1");
+        event.setUserWallet(VALID_PUBKEY);
+        event.setApproved(true);
+        solanaBlockchainService.updateKycOnChain(event);
+    }
+
+    @Test
+    void executeDividendPayout_ShouldNotCrash() {
+        Map<String, Object> event = Map.of(
+            "sourceTokenAccount", VALID_PUBKEY,
+            "userTokenAccount", VALID_PUBKEY,
+            "amount", 100L
+        );
+        solanaBlockchainService.executeDividendPayout(event);
     }
 }

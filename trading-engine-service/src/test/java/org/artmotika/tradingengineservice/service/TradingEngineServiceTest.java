@@ -1,5 +1,8 @@
 package org.artmotika.tradingengineservice.service;
 
+import org.artmotika.tradingengineservice.dto.AssetCreatedEventDto;
+import org.artmotika.common.dto.AssetStatus;
+import org.artmotika.common.dto.AssetType;
 import org.artmotika.common.dto.OrderRequestDto;
 import org.artmotika.tradingengineservice.dto.ExecutionResultDto;
 import org.artmotika.tradingengineservice.model.Asset;
@@ -19,6 +22,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.artmotika.common.dto.OrderType;
 
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -39,6 +43,38 @@ class TradingEngineServiceTest {
 
     @InjectMocks
     private TradingEngineService tradingEngineService;
+
+    @Test
+    void handleAssetCreated_ShouldSaveAsset() {
+        AssetCreatedEventDto event = new AssetCreatedEventDto();
+        event.setId("a1");
+        event.setName("Gold");
+        event.setTotalSupply(1000);
+        event.setType(AssetType.COMMODITY);
+        event.setStatus(AssetStatus.IPO_PLANNED);
+        event.setIpoPrice(BigDecimal.TEN);
+
+        tradingEngineService.handleAssetCreated(event);
+
+        verify(assetRepository, times(1)).save(argThat(asset -> 
+            asset.getId().equals("a1") && 
+            asset.getName().equals("Gold") && 
+            asset.getStatus() == AssetStatus.IPO_PLANNED
+        ));
+    }
+
+    @Test
+    void handleIpoStatusUpdate_ShouldUpdateAssetStatus() {
+        Asset asset = new Asset();
+        asset.setId("a1");
+        asset.setStatus(AssetStatus.IPO_PLANNED);
+        when(assetRepository.findById("a1")).thenReturn(Optional.of(asset));
+
+        tradingEngineService.handleIpoStatusUpdate(Map.of("assetId", "a1", "status", "IPO_ACTIVE"));
+
+        assertEquals(AssetStatus.IPO_ACTIVE, asset.getStatus());
+        verify(assetRepository, times(1)).save(asset);
+    }
 
     @Test
     void consumeOrder_ShouldValidateAndSavePendingOrder() {

@@ -1,4 +1,4 @@
-package org.artmotika.tradingengineservice.model;
+package org.artmotika.apigatewayservice.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
@@ -18,4 +18,6 @@ public class Asset {
     @Enumerated(EnumType.STRING)
     private AssetStatus status;
     private BigDecimal ipoPrice;
+    private String legalDocHash;
+    private long tradeUnlockTimestamp;
 }

@@ -2,6 +2,7 @@ package org.artmotika.tradingengineservice.service;
 
 import org.artmotika.tradingengineservice.model.Asset;
 import org.artmotika.tradingengineservice.model.CorporateAction;
+import org.artmotika.tradingengineservice.model.CorporateActionType;
 import org.artmotika.tradingengineservice.model.User;
 import org.artmotika.tradingengineservice.model.UserBalance;
 import org.artmotika.tradingengineservice.repo.AssetRepository;
@@ -15,6 +16,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -31,6 +33,20 @@ class CorporateActionServiceTest {
 
     @InjectMocks
     private CorporateActionService corporateActionService;
+
+    @Test
+    void triggerVote_ShouldSaveAndSendEvent() {
+        String assetId = "a1";
+        Asset asset = new Asset(); asset.setId(assetId);
+        when(assetRepository.findById(assetId)).thenReturn(Optional.of(asset));
+
+        corporateActionService.triggerVote(assetId, "Is this working?", List.of("Yes", "No"));
+
+        verify(corporateActionRepository, times(2)).save(argThat(ca -> 
+            ca.getAsset().getId().equals(assetId) && ca.getType() == CorporateActionType.VOTING
+        ));
+        verify(kafkaTemplate, times(1)).send(eq("vote.started"), any(Map.class));
+    }
 
     @Test
     void triggerDividend_ShouldCalculatePayoutsAndSendEvents() {
