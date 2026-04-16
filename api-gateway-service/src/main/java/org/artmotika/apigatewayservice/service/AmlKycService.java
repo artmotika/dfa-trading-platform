@@ -23,16 +23,20 @@ public class AmlKycService {
     private String authServiceUrl;
 
     public void processOrder(OrderRequestDto order) {
+        System.out.println("DEBUG: Fetching user " + order.getUserId() + " from " + authServiceUrl);
         UserDto user = restTemplate.getForObject(authServiceUrl + "/api/v1/auth/users/" + order.getUserId(), UserDto.class);
         
         if (user == null) {
+            System.out.println("DEBUG: User not found!");
             throw new KycNotVerifiedException("User not found via Auth Service");
         }
 
+        System.out.println("DEBUG: User found, wallet: " + user.getWalletAddress());
         order.setWalletAddress(user.getWalletAddress());
 
         validators.forEach(v -> v.validate(order, user));
 
+        System.out.println("DEBUG: Sending to Kafka: " + order);
         kafkaTemplate.send("orders.created", order);
     }
 }
