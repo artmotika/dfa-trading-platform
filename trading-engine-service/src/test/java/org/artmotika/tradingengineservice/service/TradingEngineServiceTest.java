@@ -75,8 +75,15 @@ class TradingEngineServiceTest {
 
     @Test
     void consumeOrder_ShouldValidateAndSavePendingOrder() {
+        org.springframework.test.util.ReflectionTestUtils.setField(tradingEngineService, "platformWallet", "platform_w");
+        
         OrderRequestDto dto = new OrderRequestDto();
-        dto.setUserId("u1"); dto.setAssetId("a1"); dto.setAmount(BigDecimal.ONE); dto.setPrice(BigDecimal.TEN); dto.setType(OrderType.BUY);
+        dto.setUserId("u1"); 
+        dto.setWalletAddress("wallet1");
+        dto.setAssetId("a1"); 
+        dto.setAmount(BigDecimal.ONE); 
+        dto.setPrice(BigDecimal.TEN); 
+        dto.setType(OrderType.BUY);
 
         when(assetRepository.findById("a1")).thenReturn(Optional.of(new Asset()));
 
@@ -86,7 +93,8 @@ class TradingEngineServiceTest {
         verify(orderRepository, times(1)).save(argThat(order -> 
             order.getStatus() == Order.OrderStatus.PENDING && 
             order.getPrice().equals(BigDecimal.TEN) &&
-            order.getUserId().equals("u1")
+            order.getUserId().equals("u1") &&
+            order.getWalletAddress().equals("wallet1")
         ));
         verify(kafkaTemplate, times(1)).send(eq("orders.validated"), any());
     }

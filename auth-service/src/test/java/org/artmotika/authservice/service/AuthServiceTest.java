@@ -36,11 +36,12 @@ class AuthServiceTest {
     void register_ShouldSaveUserAndSendKafkaEvent() {
         when(passwordEncoder.encode(any())).thenReturn("hashed_pass");
         
-        String token = authService.register("wallet123", "password");
+        String wallet = "wallet123";
+        String token = authService.register(wallet, "password");
         
         assertNotNull(token);
         verify(userRepository, times(1)).save(any(User.class));
-        verify(kafkaTemplate, times(1)).send(eq("users.registered"), anyString());
+        verify(kafkaTemplate, times(1)).send(eq("users.registered"), eq(wallet));
     }
 
     @Test

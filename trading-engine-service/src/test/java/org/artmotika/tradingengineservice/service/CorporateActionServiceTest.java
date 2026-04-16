@@ -33,12 +33,15 @@ class CorporateActionServiceTest {
 
     @Test
     void triggerDividend_ShouldCalculatePayoutsAndSendToKafka() {
+        org.springframework.test.util.ReflectionTestUtils.setField(corporateActionService, "platformTokenAccount", "plat_ata");
+        
         String assetId = "a1";
-        Asset asset = new Asset(); asset.setId(assetId);
+        Asset asset = new Asset(); asset.setId(assetId); asset.setSolanaMintAddress("mint123");
         when(assetRepository.findById(assetId)).thenReturn(Optional.of(asset));
 
         UserBalance b1 = new UserBalance();
         b1.setUserId("u1");
+        b1.setWalletAddress("wallet1");
         b1.setAmount(new BigDecimal("100"));
 
         when(balanceService.getBalancesByAsset(assetId)).thenReturn(List.of(b1));
@@ -47,7 +50,9 @@ class CorporateActionServiceTest {
 
         verify(kafkaTemplate, times(1)).send(eq("dividend.payout"), argThat(map -> {
             Map m = (Map) map;
-            return m.get("userId").equals("u1") && m.get("amount").equals(new BigDecimal("250.0"));
+            return m.get("userId").equals("u1") && 
+                   m.get("userWallet").equals("wallet1") &&
+                   m.get("amount").equals(250L);
         }));
         verify(corporateActionRepository, times(2)).save(any());
     }

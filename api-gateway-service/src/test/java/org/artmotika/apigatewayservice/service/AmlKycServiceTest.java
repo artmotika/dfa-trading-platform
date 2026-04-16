@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -45,6 +46,7 @@ class AmlKycServiceTest {
         ReflectionTestUtils.setField(amlKycService, "authServiceUrl", authServiceUrl);
         approvedUser = UserDto.builder()
                 .id("user-1")
+                .walletAddress("wallet123")
                 .kycStatus(KycStatus.APPROVED)
                 .amlRiskScore(0)
                 .build();
@@ -56,11 +58,12 @@ class AmlKycServiceTest {
         order.setUserId("user-1");
         order.setAmount(new BigDecimal("100"));
         
-        when(restTemplate.getForObject(authServiceUrl + "/api/auth/users/user-1", UserDto.class))
+        when(restTemplate.getForObject(authServiceUrl + "/api/v1/auth/users/user-1", UserDto.class))
                 .thenReturn(approvedUser);
         
         amlKycService.processOrder(order);
         
+        assertEquals("wallet123", order.getWalletAddress());
         verify(kafkaTemplate, times(1)).send(eq("orders.created"), eq(order));
     }
 
@@ -73,7 +76,7 @@ class AmlKycServiceTest {
         OrderRequestDto order = new OrderRequestDto();
         order.setUserId("user-1");
         
-        when(restTemplate.getForObject(authServiceUrl + "/api/auth/users/user-1", UserDto.class))
+        when(restTemplate.getForObject(authServiceUrl + "/api/v1/auth/users/user-1", UserDto.class))
                 .thenReturn(approvedUser);
         
         assertThrows(RuntimeException.class, () -> amlKycService.processOrder(order));
