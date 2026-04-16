@@ -7,16 +7,21 @@ spring:
       enabled: true
   application:
     name: trading-engine-service
+  liquibase:
+    change-log: classpath:/db/changelog/db.changelog-master.sql
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/platform}
+    url: ${DB_URL:jdbc:postgresql://localhost:54321/platform}
     username: ${DB_USER:postgres}
     password: ${DB_PASS:postgres}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: validate # ? ????? ????? ?????????? Flyway/Liquibase
-    show-sql: false
-  kafka:
+      ddl-auto: validate
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
     bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
     consumer:
       group-id: trading-engine-group

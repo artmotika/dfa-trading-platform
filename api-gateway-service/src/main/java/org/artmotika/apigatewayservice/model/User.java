@@ -12,5 +12,6 @@ public class User {
     @Enumerated(EnumType.STRING)
     private KycStatus kycStatus;
     private Integer amlRiskScore;
+    private String password;
     private boolean isQualified;
 }

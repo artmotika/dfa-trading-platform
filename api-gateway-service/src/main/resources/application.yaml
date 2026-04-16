@@ -8,12 +8,16 @@ spring:
   application:
     name: api-gateway-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/platform
+    url: jdbc:postgresql://localhost:54321/platform
     username: postgres
     password: postgres
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
   kafka:
     bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
     producer:

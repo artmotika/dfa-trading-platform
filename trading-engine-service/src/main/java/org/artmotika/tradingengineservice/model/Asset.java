@@ -18,4 +18,6 @@ public class Asset {
     @Enumerated(EnumType.STRING)
     private AssetStatus status;
     private BigDecimal ipoPrice;
+    private String legalDocHash;
+    private long tradeUnlockTimestamp;
 }
