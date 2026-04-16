@@ -23,11 +23,13 @@ public class AmlKycService {
     private String authServiceUrl;
 
     public void processOrder(OrderRequestDto order) {
-        UserDto user = restTemplate.getForObject(authServiceUrl + "/api/auth/users/" + order.getUserId(), UserDto.class);
+        UserDto user = restTemplate.getForObject(authServiceUrl + "/api/v1/auth/users/" + order.getUserId(), UserDto.class);
         
         if (user == null) {
             throw new KycNotVerifiedException("User not found via Auth Service");
         }
+
+        order.setWalletAddress(user.getWalletAddress());
 
         validators.forEach(v -> v.validate(order, user));
 

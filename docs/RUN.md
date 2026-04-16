@@ -29,6 +29,8 @@ docker-compose up -d
 - `AUTH_SERVICE_URL` — адрес Auth Service (по умолчанию `http://localhost:8083`)
 - `TRADING_SERVICE_URL` — адрес Trading Engine (по умолчанию `http://localhost:8081`)
 - `DB_URL` — URL подключения к БД (у каждого сервиса своя БД)
+- `APP_PLATFORM_WALLET` — адрес кошелька платформы для сделок (в `trading-engine-service`)
+- `APP_PLATFORM_TOKEN_ACCOUNT` — адрес ATA платформы для выплаты дивидендов (в `trading-engine-service`)
 
 ### Запуск сервисов по порядку:
 1. **Auth Service (БД: auth_db, Порт 8083):**

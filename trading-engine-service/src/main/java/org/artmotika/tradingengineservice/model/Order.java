@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 public class Order {
     @Id private String id;
     private String userId; // Logical reference to auth-service
+    private String walletAddress;
     @ManyToOne @JoinColumn(name = "asset_id") private Asset asset;
     @Enumerated(EnumType.STRING) private OrderType type;
     private BigDecimal amount;

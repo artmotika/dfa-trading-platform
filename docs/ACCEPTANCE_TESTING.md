@@ -4,7 +4,7 @@ This guide provides step-by-step instructions to verify the full functional cycl
 
 ## Prerequisites
 1.  **Solana CLI**: Installed and configured to `devnet`.
-2.  **Environment**: Services (`api-gateway`, `solana-connector`, `trading-engine`) are running.
+2.  **Environment**: Services (`api-gateway`, `solana-connector`, `trading-engine`, `auth-service`) are running.
 3.  **Kafka & Postgres**: Up and running.
 4.  **Admin Key**: The private key in `solana-connector` must have some Devnet SOL for transaction fees.
 
@@ -20,12 +20,12 @@ Register two users (User A and User B) to simulate trading.
 # Register User A
 curl -X POST http://localhost:8080/api/v1/auth/register \
 -H "Content-Type: application/json" \
--d '{"username": "user_a", "walletAddress": "USER_A_SOLANA_WALLET_ADDRESS"}'
+-d '{"wallet": "USER_A_SOLANA_WALLET_ADDRESS", "password": "password123"}'
 
 # Register User B
 curl -X POST http://localhost:8080/api/v1/auth/register \
 -H "Content-Type: application/json" \
--d '{"username": "user_b", "walletAddress": "USER_B_SOLANA_WALLET_ADDRESS"}'
+-d '{"wallet": "USER_B_SOLANA_WALLET_ADDRESS", "password": "password123"}'
 ```
 **Expected**: `solana-connector` logs "Registering User on Solana". A `UserAccount` PDA is created on-chain.
 
@@ -80,25 +80,24 @@ curl -X POST "http://localhost:8080/api/v1/admin/ipo/finalize?assetId=ASSET_UUID
 ## Phase 3: Secondary Trading & AML
 
 ### 3.1 Execute Trade
-Simulate a validated order between User A (Seller) and User B (Buyer).
-*Note: In production, this is triggered by the Matching Engine. For testing, we send a validated event to Kafka or use an internal endpoint if available.*
+Submit an order for User A. The Trading Engine and API Gateway will validate KYC and account status, resolving the wallet addresses and forwarding to the Solana Connector for execution.
 ```bash
-# Internal simulation of a validated trade
-curl -X POST http://localhost:8080/api/v1/trading/trade/execute \
+# Submit an order
+curl -X POST http://localhost:8080/api/v1/orders \
 -H "Content-Type: application/json" \
 -d '{
+  "userId": "USER_A_UUID",
   "assetId": "ASSET_UUID",
-  "sellerWallet": "USER_A_WALLET",
-  "buyerWallet": "USER_B_WALLET",
-  "sellerTokenAccount": "USER_A_ATA",
-  "buyerTokenAccount": "USER_B_ATA",
-  "amount": 50
+  "type": "SELL",
+  "amount": 50,
+  "price": 100.00
 }'
 ```
 **Expected**:
-1.  Solana Program verifies KYC for both.
-2.  Solana Program verifies neither account is frozen.
-3.  Tokens are transferred from Seller to Buyer.
+1.  API Gateway resolves User A's wallet.
+2.  Trading Engine matches or executes the order against the platform counterparty.
+3.  Solana Connector automatically derives ATA (Associated Token Accounts) if not provided.
+4.  Solana Program verifies KYC and freeze status for both wallets and executes the transfer via admin/platform authorization.
 
 ### 3.2 AML Freeze
 Freeze User B's account due to suspicious activity.
@@ -126,7 +125,7 @@ curl -X POST http://localhost:8080/api/v1/admin/vote \
 ```
 **Expected**:
 1.  `Voting` PDA created on Solana.
-2.  Users can now call `cast_vote` on-chain (weight = token balance).
+2.  Users can now call `cast_vote` on-chain (weight = token balance). The contract uses a `UserVote` PDA to securely prevent double-voting.
 
 ### 4.2 Distribute Dividends
 Payout profits to asset holders.
@@ -139,7 +138,7 @@ curl -X POST http://localhost:8080/api/v1/admin/dividends/distribute \
   "sourceTokenAccount": "ADMIN_RESERVE_ATA"
 }'
 ```
-**Expected**: On-chain `distribute_dividend` is called. Holders receive tokens proportional to their share (or flat amount as per request).
+**Expected**: Corporate action triggers dividend payout messages via Kafka. On-chain `distribute_dividend` is called under strict admin authorization. Holders receive tokens proportional to their share.
 
 ---
 

@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 @Data
 public class OrderRequestDto {
     String userId;
+    String walletAddress;
     String assetId;
     OrderType type;
     BigDecimal amount;

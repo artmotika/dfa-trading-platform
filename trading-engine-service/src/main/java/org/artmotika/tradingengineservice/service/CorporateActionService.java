@@ -25,6 +25,9 @@ public class CorporateActionService {
     private final BalanceService balanceService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
+    @org.springframework.beans.factory.annotation.Value("${app.platform.token-account}")
+    private String platformTokenAccount;
+
     public void triggerDividend(String assetId, BigDecimal amountPerShare) {
         Asset asset = assetRepository.findById(assetId).orElseThrow();
         
@@ -46,9 +49,12 @@ public class CorporateActionService {
                 log.info("Triggering Dividend Payout for User {}: {} units", balance.getUserId(), payout);
                 kafkaTemplate.send("dividend.payout", Map.of(
                     "userId", balance.getUserId(),
+                    "userWallet", balance.getWalletAddress(),
                     "assetId", assetId,
-                    "amount", payout,
-                    "actionId", ca.getId()
+                    "mintAddress", asset.getSolanaMintAddress(),
+                    "amount", payout.longValue(), // Convert to long for on-chain
+                    "actionId", ca.getId(),
+                    "sourceTokenAccount", platformTokenAccount
                 ));
             }
         });

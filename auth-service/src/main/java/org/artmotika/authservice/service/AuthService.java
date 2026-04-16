@@ -23,6 +23,10 @@ public class AuthService {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private static final SecretKey KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
 
+    public User getUser(String id) {
+        return userRepository.findById(id).orElseThrow();
+    }
+
     public String register(String wallet, String password) {
         User user = User.builder()
                 .id(UUID.randomUUID().toString())
@@ -32,7 +36,7 @@ public class AuthService {
                 .password(passwordEncoder.encode(password))
                 .build();
         userRepository.save(user);
-        kafkaTemplate.send("users.registered", user.getId());
+        kafkaTemplate.send("users.registered", user.getWalletAddress());
         return generateToken(user);
     }
 
@@ -56,7 +60,7 @@ public class AuthService {
                 .password(passwordEncoder.encode("ESIA_OAUTH_" + code))
                 .build();
         userRepository.save(user);
-        kafkaTemplate.send("users.registered", user.getId());
+        kafkaTemplate.send("users.registered", user.getWalletAddress());
         return generateToken(user);
     }
 

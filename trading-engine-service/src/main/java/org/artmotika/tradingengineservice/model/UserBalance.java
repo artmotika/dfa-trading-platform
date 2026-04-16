@@ -11,6 +11,7 @@ public class UserBalance {
     @Id private String id; // Typically user_id + ":" + asset_id
     
     private String userId; // Logical reference to auth-service
+    private String walletAddress;
     @ManyToOne @JoinColumn(name = "asset_id") private Asset asset;
     
     private BigDecimal amount;

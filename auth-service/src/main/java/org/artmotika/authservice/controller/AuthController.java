@@ -31,4 +31,17 @@ public class AuthController {
         String token = authService.loginViaEsia(code);
         return ResponseEntity.ok(Map.of("token", token));
     }
+
+    @GetMapping("/users/{id}")
+    public ResponseEntity<org.artmotika.common.dto.UserDto> getUser(@PathVariable String id) {
+        org.artmotika.authservice.model.User user = authService.getUser(id);
+        org.artmotika.common.dto.UserDto dto = org.artmotika.common.dto.UserDto.builder()
+                .id(user.getId())
+                .walletAddress(user.getWalletAddress())
+                .kycStatus(user.getKycStatus())
+                .amlRiskScore(user.getAmlRiskScore())
+                .isQualified(user.isQualified())
+                .build();
+        return ResponseEntity.ok(dto);
+    }
 }

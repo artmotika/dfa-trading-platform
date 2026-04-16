@@ -12,6 +12,7 @@ import org.artmotika.tradingengineservice.model.TradeLedger;
 import org.artmotika.tradingengineservice.repo.AssetRepository;
 import org.artmotika.tradingengineservice.repo.OrderRepository;
 import org.artmotika.tradingengineservice.repo.TradeLedgerRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -54,6 +55,9 @@ public class TradingEngineService {
         assetRepository.save(asset);
     }
 
+    @Value("${app.platform.wallet:Platform111111111111111111111111111111111}")
+    private String platformWallet;
+
     @KafkaListener(topics = "orders.created", groupId = "trading-engine-group")
     public void consumeOrder(OrderRequestDto dto) {
         // Use external volatility check service
@@ -61,7 +65,8 @@ public class TradingEngineService {
 
         Order order = new Order();
         order.setId(UUID.randomUUID().toString());
-        order.setUserId(dto.getUserId()); // Logical reference
+        order.setUserId(dto.getUserId()); 
+        order.setWalletAddress(dto.getWalletAddress());
         order.setAsset(assetRepository.findById(dto.getAssetId()).orElseThrow());
         order.setType(Order.OrderType.valueOf(dto.getType().name()));
         order.setAmount(dto.getAmount());
@@ -71,8 +76,19 @@ public class TradingEngineService {
         orderRepository.save(order);
 
         ValidatedOrderEventDto event = new ValidatedOrderEventDto();
-        event.setId(order.getId()); event.setUserId(dto.getUserId());
-        event.setAssetId(dto.getAssetId()); event.setAmount(dto.getAmount()); event.setPrice(dto.getPrice());
+        event.setId(order.getId()); 
+        event.setAssetId(dto.getAssetId()); 
+        event.setAmount(dto.getAmount()); 
+        event.setPrice(dto.getPrice());
+        
+        if (order.getType() == Order.OrderType.SELL) {
+            event.setSellerWallet(order.getWalletAddress());
+            event.setBuyerWallet(platformWallet);
+        } else {
+            event.setSellerWallet(platformWallet);
+            event.setBuyerWallet(order.getWalletAddress());
+        }
+        
         kafkaTemplate.send("orders.validated", event);
     }
 
