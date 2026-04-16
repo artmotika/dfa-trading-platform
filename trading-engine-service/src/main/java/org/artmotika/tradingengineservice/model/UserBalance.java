@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 public class UserBalance {
     @Id private String id; // Typically user_id + ":" + asset_id
     
-    @ManyToOne @JoinColumn(name = "user_id") private User user;
+    private String userId; // Logical reference to auth-service
     @ManyToOne @JoinColumn(name = "asset_id") private Asset asset;
     
     private BigDecimal amount;

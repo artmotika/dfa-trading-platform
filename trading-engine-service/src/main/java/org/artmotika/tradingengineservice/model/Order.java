@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Data @Entity @Table(name = "orders")
 public class Order {
     @Id private String id;
-    @ManyToOne @JoinColumn(name = "user_id") private User user;
+    private String userId; // Logical reference to auth-service
     @ManyToOne @JoinColumn(name = "asset_id") private Asset asset;
     @Enumerated(EnumType.STRING) private OrderType type;
     private BigDecimal amount;

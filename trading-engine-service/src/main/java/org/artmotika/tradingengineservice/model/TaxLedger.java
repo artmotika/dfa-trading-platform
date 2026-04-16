@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Data
 public class TaxLedger {
     @Id private String id;
-    @ManyToOne @JoinColumn(name = "user_id") private User user;
+    private String userId; // Logical reference to auth-service
     @OneToOne @JoinColumn(name = "order_id") private Order order;
     private BigDecimal taxAmount;
     private LocalDateTime timestamp;

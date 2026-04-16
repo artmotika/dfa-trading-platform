@@ -12,7 +12,6 @@ import org.artmotika.tradingengineservice.model.TradeLedger;
 import org.artmotika.tradingengineservice.repo.AssetRepository;
 import org.artmotika.tradingengineservice.repo.OrderRepository;
 import org.artmotika.tradingengineservice.repo.TradeLedgerRepository;
-import org.artmotika.tradingengineservice.repo.UserRepository;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -26,7 +25,6 @@ import java.util.UUID;
 public class TradingEngineService {
     private final OrderRepository orderRepository;
     private final TradeLedgerRepository ledgerRepository;
-    private final UserRepository userRepository;
     private final AssetRepository assetRepository;
     private final KafkaTemplate<String, ValidatedOrderEventDto> kafkaTemplate;
 
@@ -63,7 +61,7 @@ public class TradingEngineService {
 
         Order order = new Order();
         order.setId(UUID.randomUUID().toString());
-        order.setUser(userRepository.findById(dto.getUserId()).orElseThrow());
+        order.setUserId(dto.getUserId()); // Logical reference
         order.setAsset(assetRepository.findById(dto.getAssetId()).orElseThrow());
         order.setType(Order.OrderType.valueOf(dto.getType().name()));
         order.setAmount(dto.getAmount());

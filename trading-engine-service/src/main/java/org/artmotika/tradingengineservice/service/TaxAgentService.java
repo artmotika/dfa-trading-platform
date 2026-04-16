@@ -49,7 +49,7 @@ public class TaxAgentService {
 
         TaxLedger tax = new TaxLedger();
         tax.setId(UUID.randomUUID().toString());
-        tax.setUser(order.getUser());
+        tax.setUserId(order.getUserId());
         tax.setOrder(order);
         tax.setTaxAmount(taxAmount);
         tax.setTimestamp(LocalDateTime.now());
@@ -59,7 +59,7 @@ public class TaxAgentService {
 
     private BigDecimal calculateCostBasis(Order order) {
         // Use Weighted Average Cost from the user's current balance
-        var balance = balanceService.getBalance(order.getUser().getId(), order.getAsset().getId());
+        var balance = balanceService.getBalance(order.getUserId(), order.getAsset().getId());
         return balance != null ? balance.getWeightedAverageCost() : BigDecimal.ZERO;
     }
 }

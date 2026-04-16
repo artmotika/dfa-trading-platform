@@ -22,14 +22,14 @@ public class BalanceService {
 
     @Transactional
     public void updateBalanceOnExecution(Order order) {
-        String userId = order.getUser().getId();
+        String userId = order.getUserId();
         String assetId = order.getAsset().getId();
         String id = userId + ":" + assetId;
 
         UserBalance balance = balanceRepository.findById(id).orElseGet(() -> {
             UserBalance b = new UserBalance();
             b.setId(id);
-            b.setUser(order.getUser());
+            b.setUserId(userId);
             b.setAsset(order.getAsset());
             b.setAmount(BigDecimal.ZERO);
             b.setWeightedAverageCost(BigDecimal.ZERO);

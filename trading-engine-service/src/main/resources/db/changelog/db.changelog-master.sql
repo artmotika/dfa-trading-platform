@@ -1,14 +1,8 @@
 --liquibase formatted sql
 
---changeset initial:2
-CREATE TABLE IF NOT EXISTS users (
-   id VARCHAR(255) PRIMARY KEY,
-   wallet_address VARCHAR(255) NOT NULL UNIQUE,
-   kyc_status VARCHAR(50) NOT NULL,
-   aml_risk_score INT DEFAULT 0,
-   password VARCHAR(255),
-   is_qualified BOOLEAN DEFAULT FALSE
-);
+--changeset initial:3
+-- Note: users table is now managed by auth-service in its own database.
+-- We no longer have physical FK constraints to users table.
 
 CREATE TABLE IF NOT EXISTS assets (
     id VARCHAR(255) PRIMARY KEY,
@@ -23,14 +17,14 @@ CREATE TABLE IF NOT EXISTS assets (
 );
 
 CREATE TABLE IF NOT EXISTS investor_limits (
-    user_id VARCHAR(255) PRIMARY KEY REFERENCES users(id),
+    user_id VARCHAR(255) PRIMARY KEY, -- Logical reference to auth_db.users.id
     annual_investment DECIMAL(19, 4) NOT NULL,
     last_reset TIMESTAMP NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS orders (
     id VARCHAR(255) PRIMARY KEY,
-    user_id VARCHAR(255) NOT NULL REFERENCES users(id),
+    user_id VARCHAR(255) NOT NULL, -- Logical reference
     asset_id VARCHAR(255) NOT NULL REFERENCES assets(id),
     type VARCHAR(10) NOT NULL,
     amount DECIMAL(19, 4) NOT NULL,
@@ -41,7 +35,7 @@ CREATE TABLE IF NOT EXISTS orders (
 
 CREATE TABLE IF NOT EXISTS tax_ledger (
     id VARCHAR(255) PRIMARY KEY,
-    user_id VARCHAR(255) REFERENCES users(id),
+    user_id VARCHAR(255),
     order_id VARCHAR(255) REFERENCES orders(id),
     tax_amount DECIMAL(19, 4) NOT NULL,
     timestamp TIMESTAMP NOT NULL
@@ -66,7 +60,7 @@ CREATE TABLE IF NOT EXISTS trades_ledger (
 
 CREATE TABLE IF NOT EXISTS user_balances (
     id VARCHAR(255) PRIMARY KEY,
-    user_id VARCHAR(255) REFERENCES users(id),
+    user_id VARCHAR(255),
     asset_id VARCHAR(255) REFERENCES assets(id),
     amount DECIMAL(19, 4) NOT NULL,
     weighted_average_cost DECIMAL(19, 4),
