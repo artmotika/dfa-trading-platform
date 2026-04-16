@@ -60,6 +60,7 @@ pub mod dfa_advanced_platform {
         require!(!voting.is_finalized, CustomError::VotingFinalized);
         require!(option_index < voting.options_count, CustomError::InvalidOption);
         require!(ctx.accounts.user_account.is_kyc_approved, CustomError::KycNotApproved);
+        require!(ctx.accounts.user_token_account.mint == ctx.accounts.asset_registry.mint, CustomError::WrongMint);
 
         let weight = ctx.accounts.user_token_account.amount;
         voting.votes_per_option[option_index as usize] += weight;
@@ -102,6 +103,7 @@ pub mod dfa_advanced_platform {
         let clock = Clock::get()?;
 
         require!(ctx.accounts.seller_token_account.mint == registry.mint, CustomError::WrongMint);
+        require!(ctx.accounts.buyer_token_account.mint == registry.mint, CustomError::WrongMint);
         require!(clock.unix_timestamp >= registry.trade_unlock_timestamp, CustomError::TradingLocked);
         require!(registry.is_active, CustomError::PlatformInactive);
         require!(ctx.accounts.seller_account.is_kyc_approved, CustomError::KycNotApproved);
@@ -131,7 +133,8 @@ pub mod dfa_advanced_platform {
     }
 }
 
-// Включаем модуль тестов
+// Включаем модуль тестов только при тестировании
+#[cfg(test)]
 mod tests;
 
 #[derive(Accounts)]
@@ -154,7 +157,8 @@ pub struct AdminAction<'info> {
 #[derive(Accounts)]
 #[instruction(action_id: String)]
 pub struct InitializeVoting<'info> {
-    #[account(init, payer = admin, space = 8 + 32 + 64 + 1 + 64 + 8 + 1, seeds = [b"voting", action_id.as_bytes()], bump)]
+    // Увеличено место для votes_per_option (4 + 255 * 8 = 2044)
+    #[account(init, payer = admin, space = 8 + 32 + 64 + 1 + 2044 + 8 + 1, seeds = [b"voting", action_id.as_bytes()], bump)]
     pub voting_account: Account<'info, Voting>,
     pub asset_registry: Account<'info, AssetRegistry>,
     #[account(mut)] pub admin: Signer<'info>,
@@ -164,6 +168,7 @@ pub struct InitializeVoting<'info> {
 #[derive(Accounts)]
 pub struct CastVote<'info> {
     #[account(mut)] pub voting_account: Account<'info, Voting>,
+    pub asset_registry: Account<'info, AssetRegistry>,
     #[account(seeds = [b"user", user_wallet.key().as_ref()], bump)]
     pub user_account: Account<'info, UserAccount>,
     pub user_token_account: Account<'info, TokenAccount>,
