@@ -17,8 +17,7 @@ class OrderController {
 
     @PostMapping("/orders")
     public ResponseEntity<String> submitOrder(@RequestBody OrderRequestDto order) {
-        System.out.println("DEBUG: submitOrder called for user: " + order.getUserId());
         amlKycService.processOrder(order);
-        return ResponseEntity.accepted().body("Order Accepted v2");
+        return ResponseEntity.accepted().body("Order Accepted");
     }
 }

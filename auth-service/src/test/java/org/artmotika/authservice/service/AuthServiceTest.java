@@ -32,6 +32,11 @@ class AuthServiceTest {
     @InjectMocks
     private AuthService authService;
 
+    @BeforeEach
+    void setUp() {
+        org.springframework.test.util.ReflectionTestUtils.setField(authService, "secretKey", "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970");
+    }
+
     @Test
     void register_ShouldSaveUserAndSendKafkaEvent() {
         when(passwordEncoder.encode(any())).thenReturn("hashed_pass");
