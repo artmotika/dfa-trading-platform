@@ -2,9 +2,11 @@ package org.artmotika.authservice.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.artmotika.authservice.model.User;
 import org.artmotika.authservice.repo.UserRepository;
-import org.artmotika.common.dto.*;
+import org.artmotika.common.dto.FreezeRequestDto;
+import org.artmotika.common.dto.KycStatus;
+import org.artmotika.common.dto.KycUpdateRequestDto;
+import org.artmotika.common.dto.RiskScoreUpdateRequestDto;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 

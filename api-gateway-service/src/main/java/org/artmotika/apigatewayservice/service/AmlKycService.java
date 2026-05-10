@@ -1,6 +1,7 @@
 package org.artmotika.apigatewayservice.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.artmotika.apigatewayservice.exception.KycNotVerifiedException;
 import org.artmotika.common.dto.UserDto;
 import org.artmotika.apigatewayservice.service.validator.OrderValidator;
@@ -12,6 +13,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AmlKycService {
@@ -23,28 +25,28 @@ public class AmlKycService {
     private String authServiceUrl;
 
     public void processOrder(OrderRequestDto order) {
-        System.out.println("DEBUG: Fetching user " + order.getUserId() + " from " + authServiceUrl);
+        log.debug("Fetching user {} from {}", order.getUserId(), authServiceUrl);
         UserDto user = restTemplate.getForObject(authServiceUrl + "/api/v1/auth/users/" + order.getUserId(), UserDto.class);
         
         if (user == null) {
-            System.out.println("DEBUG: User not found!");
+            log.error("User not found!");
             throw new KycNotVerifiedException("User not found via Auth Service");
         }
 
-        System.out.println("DEBUG: User found, wallet: " + user.getWalletAddress());
+        log.debug("User found, wallet: {}", user.getWalletAddress());
         order.setWalletAddress(user.getWalletAddress());
 
         validators.forEach(v -> {
-            System.out.println("DEBUG: Running validator: " + v.getClass().getSimpleName());
+            log.debug("Running validator: {}", v.getClass().getSimpleName());
             try {
                 v.validate(order, user);
             } catch (Exception e) {
-                System.out.println("DEBUG: Validator " + v.getClass().getSimpleName() + " threw: " + e.getMessage());
+                log.warn("Validator {} threw: {}", v.getClass().getSimpleName(), e.getMessage());
                 throw e;
             }
         });
 
-        System.out.println("DEBUG: Sending to Kafka: " + order);
+        log.info("Sending to Kafka: {}", order);
         kafkaTemplate.send("orders.created", order);
     }
 }
