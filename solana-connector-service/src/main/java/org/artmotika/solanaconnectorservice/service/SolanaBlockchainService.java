@@ -3,7 +3,7 @@ package org.artmotika.solanaconnectorservice.service;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.artmotika.common.dto.AssetDto;
+import org.artmotika.common.dto.*;
 import org.artmotika.solanaconnectorservice.config.SolanaProperties;
 import org.artmotika.solanaconnectorservice.dto.ClawbackEventDto;
 import org.artmotika.solanaconnectorservice.dto.ExecutionResultDto;
@@ -114,9 +114,10 @@ public class SolanaBlockchainService {
     }
 
     @KafkaListener(topics = "${kafka.topics.ipo-status}", groupId = "${kafka.groups.solana-connector}")
-    public void toggleIpoOnChain(Map<String, Object> event) {
-        String assetId = (String) event.get("assetId");
-        boolean active = "IPO_ACTIVE".equals(event.get("status"));
+    public void toggleIpoOnChain(IpoStatusUpdateDto event) {
+        String assetId = event.getAssetId();
+        boolean active = AssetStatus.IPO_ACTIVE.equals(event.getStatus());
+        log.info("Toggling IPO on chain for asset {}: {}", assetId, active);
         
         PublicKey assetRegistryPda = derivePda("registry", assetId);
         List<AccountMeta> keys = List.of(
@@ -132,7 +133,8 @@ public class SolanaBlockchainService {
     }
 
     @KafkaListener(topics = "${kafka.topics.vote-started}", groupId = "${kafka.groups.solana-connector}")
-    public void startVotingOnChain(VotingEventDto event) {
+    public void startVotingOnChain(VoteStartedEventDto event) {
+        log.info("Starting Voting on chain: {}", event.getActionId());
         PublicKey votingPda = derivePda("voting", event.getActionId());
         PublicKey assetRegistryPda = derivePda("registry", event.getAssetId());
 
@@ -237,12 +239,13 @@ public class SolanaBlockchainService {
     }
 
     @KafkaListener(topics = "${kafka.topics.dividend-payout}", groupId = "${kafka.groups.solana-connector}")
-    public void executeDividendPayout(Map<String, Object> event) {
-        String assetId = (String) event.get("assetId");
+    public void executeDividendPayout(DividendPayoutEventDto event) {
+        String assetId = event.getAssetId();
+        log.info("Executing Dividend Payout on Solana for asset: {}", assetId);
         PublicKey assetRegistryPda = derivePda("registry", assetId);
-        PublicKey userTokenAccount = deriveAta((String) event.get("userWallet"), assetId);
-        PublicKey sourceTokenAccount = event.get("sourceTokenAccount") != null ? 
-            new PublicKey((String) event.get("sourceTokenAccount")) : adminAccount.getPublicKey();
+        PublicKey userTokenAccount = deriveAta(event.getUserWallet(), assetId);
+        PublicKey sourceTokenAccount = event.getSourceTokenAccount() != null ? 
+            new PublicKey(event.getSourceTokenAccount()) : adminAccount.getPublicKey();
 
         List<AccountMeta> keys = List.of(
             new AccountMeta(assetRegistryPda, false, false),
@@ -254,7 +257,7 @@ public class SolanaBlockchainService {
 
         ByteBuffer buffer = ByteBuffer.allocate(16).order(ByteOrder.LITTLE_ENDIAN);
         buffer.put(getDiscriminator("dividend-payout"));
-        buffer.putLong(((Number) event.get("amount")).longValue());
+        buffer.putLong(event.getAmount());
         sendAndConfirm(new TransactionInstruction(programId, keys, buffer.array()));
     }
 

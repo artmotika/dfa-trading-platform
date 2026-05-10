@@ -2,28 +2,24 @@ package org.artmotika.apigatewayservice.service.validator;
 
 import lombok.RequiredArgsConstructor;
 import org.artmotika.apigatewayservice.exception.AmlViolationException;
+import org.artmotika.apigatewayservice.service.StateCacheService;
 import org.artmotika.common.dto.AssetDto;
 import org.artmotika.common.dto.AssetStatus;
 import org.artmotika.common.dto.OrderRequestDto;
 import org.artmotika.common.dto.UserDto;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
 
 @Component
 @RequiredArgsConstructor
 public class AssetValidator implements OrderValidator {
-    private final RestTemplate restTemplate;
-
-    @Value("${app.services.trading}")
-    private String tradingServiceUrl;
+    private final StateCacheService cacheService;
 
     @Override
     public void validate(OrderRequestDto order, UserDto user) {
-        AssetDto asset = restTemplate.getForObject(tradingServiceUrl + "/api/assets/" + order.getAssetId(), AssetDto.class);
+        AssetDto asset = cacheService.getAsset(order.getAssetId());
 
         if (asset == null) {
-            throw new AmlViolationException("Asset not found via Trading Service");
+            throw new AmlViolationException("Asset state not found in cache");
         }
 
         if (asset.getStatus() == AssetStatus.IPO_PLANNED) {

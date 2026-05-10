@@ -5,14 +5,15 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ClawbackRequestDto {
+public class VoteStartedEventDto {
+    private String actionId;
     private String assetId;
-    private String userId;
-    private BigDecimal amount;
+    private String title;
+    private List<String> options;
 }

@@ -5,14 +5,16 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ClawbackRequestDto {
-    private String assetId;
+public class DividendPayoutEventDto {
     private String userId;
-    private BigDecimal amount;
+    private String userWallet;
+    private String assetId;
+    private String mintAddress;
+    private long amount;
+    private String actionId;
+    private String sourceTokenAccount;
 }

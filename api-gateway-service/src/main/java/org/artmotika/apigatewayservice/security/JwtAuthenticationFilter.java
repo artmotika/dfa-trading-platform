@@ -1,10 +1,13 @@
 package org.artmotika.apigatewayservice.security;
 
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.artmotika.common.dto.KycStatus;
+import org.artmotika.common.dto.UserDto;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -28,7 +31,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
-        final String userId;
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
@@ -37,16 +39,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         jwt = authHeader.substring(7);
         try {
-            userId = jwtService.extractUsername(jwt);
-            if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                if (jwtService.isTokenValid(jwt)) {
-                    String role = jwtService.extractClaim(jwt, claims -> claims.get("role", String.class));
+            if (SecurityContextHolder.getContext().getAuthentication() == null) {
+                Claims claims = jwtService.extractClaim(jwt, c -> c);
+                if (claims != null && jwtService.isTokenValid(jwt)) {
+                    UserDto user = UserDto.builder()
+                            .id(claims.getSubject())
+                            .walletAddress(claims.get("wallet", String.class))
+                            .kycStatus(KycStatus.valueOf(claims.get("kycStatus", String.class)))
+                            .amlRiskScore(claims.get("amlRiskScore", Integer.class))
+                            .qualified(claims.get("qualified", Boolean.class))
+                            .frozen(claims.get("frozen", Boolean.class))
+                            .build();
+
+                    String role = claims.get("role", String.class);
                     List<GrantedAuthority> authorities = role != null ? 
                             Collections.singletonList(new SimpleGrantedAuthority(role)) : 
                             Collections.emptyList();
                     
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userId, null, authorities
+                            user, null, authorities
                     );
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);

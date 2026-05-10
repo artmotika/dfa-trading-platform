@@ -2,9 +2,7 @@ package org.artmotika.tradingengineservice.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.artmotika.common.dto.AssetDto;
-import org.artmotika.common.dto.AssetStatus;
-import org.artmotika.common.dto.OrderRequestDto;
+import org.artmotika.common.dto.*;
 import org.artmotika.tradingengineservice.config.TradingProperties;
 import org.artmotika.tradingengineservice.dto.ExecutionResultDto;
 import org.artmotika.tradingengineservice.dto.ValidatedOrderEventDto;
@@ -14,13 +12,11 @@ import org.artmotika.tradingengineservice.model.TradeLedger;
 import org.artmotika.tradingengineservice.repo.AssetRepository;
 import org.artmotika.tradingengineservice.repo.OrderRepository;
 import org.artmotika.tradingengineservice.repo.TradeLedgerRepository;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,6 +33,8 @@ public class TradingEngineService {
     private final TaxAgentService taxAgentService;
     private final BalanceService balanceService;
     private final TradingProperties tradingProperties;
+    private final StatePublishService statePublishService;
+    private final org.artmotika.tradingengineservice.mapper.AssetMapper assetMapper;
 
     @KafkaListener(topics = "assets.created", groupId = "trading-engine-group")
     public void handleAssetCreated(AssetDto event) {
@@ -51,41 +49,42 @@ public class TradingEngineService {
         asset.setIpoPrice(event.getIpoPrice());
         asset.setTradeUnlockTimestamp(event.getTradeUnlockTimestamp() != null ? event.getTradeUnlockTimestamp() : 0L);
         assetRepository.save(asset);
-        log.info("Asset {} saved to database", event.getId());
+        
+        statePublishService.updateAsset(event);
+        log.info("Asset {} saved to database and Redis", event.getId());
     }
 
     @KafkaListener(topics = "ipo.status", groupId = "trading-engine-group")
-    public void handleIpoStatusUpdate(Map<String, Object> event) {
-        String assetId = (String) event.get("assetId");
-        String statusStr = (String) event.get("status");
-        log.info("Consuming IPO status update for asset {}: {}", assetId, statusStr);
-        
-        AssetStatus status = AssetStatus.valueOf(statusStr);
+    public void handleIpoStatusUpdate(IpoStatusUpdateDto event) {
+        log.info("Consuming IPO status update for asset {}: {}", event.getAssetId(), event.getStatus());
         
         // Simple retry for race condition
         Asset asset = null;
         for (int i = 0; i < 5; i++) {
-            Optional<Asset> assetOpt = assetRepository.findById(assetId);
+            Optional<Asset> assetOpt = assetRepository.findById(event.getAssetId());
             if (assetOpt.isPresent()) {
                 asset = assetOpt.get();
                 break;
             }
-            log.warn("Asset {} not found yet, retrying... ({}/5)", assetId, i + 1);
+            log.warn("Asset {} not found yet, retrying... ({}/5)", event.getAssetId(), i + 1);
             try { Thread.sleep(1000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         }
 
         if (asset == null) {
-            log.error("Asset {} still not found after retries. Skipping IPO status update.", assetId);
+            log.error("Asset {} still not found after retries. Skipping IPO status update.", event.getAssetId());
             return;
         }
 
-        asset.setStatus(status);
+        asset.setStatus(event.getStatus());
         assetRepository.save(asset);
-        log.info("Asset {} status updated to {}", assetId, status);
+        
+        statePublishService.updateAsset(assetMapper.toDto(asset));
+        log.info("Asset {} status updated in DB and Redis to {}", event.getAssetId(), event.getStatus());
     }
 
     @KafkaListener(topics = "orders.created", groupId = "trading-engine-group")
     public void consumeOrder(OrderRequestDto dto) {
+        log.info("Consuming order for user: {}, asset: {}", dto.getUserId(), dto.getAssetId());
         // Use external volatility check service
         volatilityCheckService.validatePrice(dto.getAssetId(), dto.getPrice());
 
@@ -120,6 +119,7 @@ public class TradingEngineService {
 
     @KafkaListener(topics = "trades.executed", groupId = "trading-engine-group")
     public void handleExecutionResult(ExecutionResultDto result) {
+        log.info("Handling execution result for order: {}", result.getOrderId());
         Order order = orderRepository.findById(result.getOrderId()).orElseThrow();
         order.setStatus(Order.OrderStatus.COMPLETED);
         orderRepository.save(order);

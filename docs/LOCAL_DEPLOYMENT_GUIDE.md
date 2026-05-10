@@ -85,6 +85,7 @@
     ```bash
     kubectl apply -f k8s-manifests/infra/postgres.yaml
     kubectl apply -f k8s-manifests/infra/kafka.yaml
+    kubectl apply -f k8s-manifests/infra/redis.yaml
     ```
 
 3.  **Запуск сервисов:**

@@ -2,6 +2,7 @@ package org.artmotika.tradingengineservice.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.artmotika.common.dto.*;
 import org.artmotika.tradingengineservice.model.Asset;
 import org.artmotika.tradingengineservice.model.CorporateAction;
 import org.artmotika.tradingengineservice.model.CorporateActionStatus;
@@ -53,15 +54,18 @@ public class CorporateActionService {
             if (balance.getAmount().compareTo(BigDecimal.ZERO) > 0) {
                 BigDecimal payout = balance.getAmount().multiply(amountPerShare);
                 log.info("Triggering Dividend Payout for User {}: {} units", balance.getUserId(), payout);
-                kafkaTemplate.send("dividend.payout", Map.of(
-                    "userId", balance.getUserId(),
-                    "userWallet", balance.getWalletAddress(),
-                    "assetId", assetId,
-                    "mintAddress", asset.getSolanaMintAddress(),
-                    "amount", payout.longValue(), // Convert to long for on-chain
-                    "actionId", ca.getId(),
-                    "sourceTokenAccount", platformTokenAccount
-                ));
+                
+                DividendPayoutEventDto event = DividendPayoutEventDto.builder()
+                        .userId(balance.getUserId())
+                        .userWallet(balance.getWalletAddress())
+                        .assetId(assetId)
+                        .mintAddress(asset.getSolanaMintAddress())
+                        .amount(payout.longValue())
+                        .actionId(ca.getId())
+                        .sourceTokenAccount(platformTokenAccount)
+                        .build();
+                
+                kafkaTemplate.send("dividend.payout", event);
             }
         });
 
@@ -81,12 +85,15 @@ public class CorporateActionService {
         corporateActionRepository.save(ca);
 
         log.info("Triggering Voting Corporate Action: {} for Asset {}", title, assetId);
-        kafkaTemplate.send("vote.started", Map.of(
-            "actionId", ca.getId(),
-            "assetId", assetId,
-            "title", title,
-            "options", options
-        ));
+        
+        VoteStartedEventDto event = VoteStartedEventDto.builder()
+                .actionId(ca.getId())
+                .assetId(assetId)
+                .title(title)
+                .options(options)
+                .build();
+        
+        kafkaTemplate.send("vote.started", event);
 
         ca.setStatus(CorporateActionStatus.COMPLETED);
         corporateActionRepository.save(ca);
